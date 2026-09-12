@@ -18,14 +18,23 @@ export const destinations: Destination[] = [
   {city:'Al Ahsa',country:'Saudi Arabia',iata:'HOF',currency:'SAR',region:'Saudi Arabia',hotelNight:195,dailyFood:75,dailyLocal:42,dailyActivities:60},
   {city:'Sakaka',country:'Saudi Arabia',iata:'AJF',currency:'SAR',region:'Saudi Arabia',hotelNight:180,dailyFood:68,dailyLocal:38,dailyActivities:50},
   {city:'Arar',country:'Saudi Arabia',iata:'RAE',currency:'SAR',region:'Saudi Arabia',hotelNight:175,dailyFood:68,dailyLocal:36,dailyActivities:48},
+  {city:'Makkah',country:'Saudi Arabia',iata:'JED',currency:'SAR',region:'Saudi Arabia',hotelNight:280,dailyFood:85,dailyLocal:55,dailyActivities:45},
+  {city:'Khobar',country:'Saudi Arabia',iata:'DMM',currency:'SAR',region:'Saudi Arabia',hotelNight:260,dailyFood:95,dailyLocal:55,dailyActivities:75},
+  {city:'Jubail',country:'Saudi Arabia',iata:'DMM',currency:'SAR',region:'Saudi Arabia',hotelNight:240,dailyFood:90,dailyLocal:52,dailyActivities:60},
   {city:'Dubai',country:'United Arab Emirates',iata:'DXB',currency:'AED',region:'GCC',hotelNight:390,dailyFood:150,dailyLocal:85,dailyActivities:170},
   {city:'Abu Dhabi',country:'United Arab Emirates',iata:'AUH',currency:'AED',region:'GCC',hotelNight:360,dailyFood:145,dailyLocal:80,dailyActivities:155},
   {city:'Sharjah',country:'United Arab Emirates',iata:'SHJ',currency:'AED',region:'GCC',hotelNight:275,dailyFood:115,dailyLocal:62,dailyActivities:100},
+  {city:'Ras Al Khaimah',country:'United Arab Emirates',iata:'RKT',currency:'AED',region:'GCC',hotelNight:290,dailyFood:120,dailyLocal:65,dailyActivities:120},
+  {city:'Al Ain',country:'United Arab Emirates',iata:'AAN',currency:'AED',region:'GCC',hotelNight:250,dailyFood:110,dailyLocal:60,dailyActivities:95},
+  {city:'Fujairah',country:'United Arab Emirates',iata:'FJR',currency:'AED',region:'GCC',hotelNight:275,dailyFood:115,dailyLocal:65,dailyActivities:110},
   {city:'Doha',country:'Qatar',iata:'DOH',currency:'QAR',region:'GCC',hotelNight:340,dailyFood:135,dailyLocal:70,dailyActivities:130},
   {city:'Kuwait City',country:'Kuwait',iata:'KWI',currency:'KWD',region:'GCC',hotelNight:32,dailyFood:13,dailyLocal:7,dailyActivities:11},
   {city:'Manama',country:'Bahrain',iata:'BAH',currency:'BHD',region:'GCC',hotelNight:35,dailyFood:14,dailyLocal:7,dailyActivities:12},
+  {city:'Muharraq',country:'Bahrain',iata:'BAH',currency:'BHD',region:'GCC',hotelNight:32,dailyFood:13,dailyLocal:7,dailyActivities:10},
   {city:'Muscat',country:'Oman',iata:'MCT',currency:'OMR',region:'GCC',hotelNight:34,dailyFood:12,dailyLocal:7,dailyActivities:13},
   {city:'Salalah',country:'Oman',iata:'SLL',currency:'OMR',region:'GCC',hotelNight:30,dailyFood:11,dailyLocal:7,dailyActivities:14},
+  {city:'Sohar',country:'Oman',iata:'OHS',currency:'OMR',region:'GCC',hotelNight:28,dailyFood:10,dailyLocal:6,dailyActivities:10},
+  {city:'Duqm',country:'Oman',iata:'DQM',currency:'OMR',region:'GCC',hotelNight:29,dailyFood:10,dailyLocal:6,dailyActivities:9},
   {city:'Cairo',country:'Egypt',iata:'CAI',currency:'EGP',region:'Arab World',hotelNight:2400,dailyFood:850,dailyLocal:420,dailyActivities:650},
   {city:'Alexandria',country:'Egypt',iata:'HBE',currency:'EGP',region:'Arab World',hotelNight:2100,dailyFood:780,dailyLocal:380,dailyActivities:600},
   {city:'Amman',country:'Jordan',iata:'AMM',currency:'JOD',region:'Arab World',hotelNight:42,dailyFood:18,dailyLocal:10,dailyActivities:18},
@@ -49,4 +58,7 @@ export const destinations: Destination[] = [
   {city:'Moroni',country:'Comoros',iata:'HAH',currency:'KMF',region:'Arab World',hotelNight:24500,dailyFood:9600,dailyLocal:4200,dailyActivities:7000}
 ];
 
-export const uniqueDestinations = Array.from(new Map(destinations.map(d => [d.iata, d])).values());
+export const placeKey = (d: Pick<Destination,'country'|'city'>) => `${d.country}|${d.city}`;
+export const uniqueDestinations = Array.from(new Map(destinations.map(d => [placeKey(d), d])).values());
+export const countries = Array.from(new Set(uniqueDestinations.map(d=>d.country)));
+export const gccCurrencies = ['SAR','AED','KWD','BHD','QAR','OMR'] as const;
