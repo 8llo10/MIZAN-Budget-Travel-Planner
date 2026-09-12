@@ -1,6 +1,7 @@
 export type Region = 'Saudi Arabia' | 'GCC' | 'Arab World';
 export type SpendStyle = 'smart' | 'balanced' | 'comfort';
 export type TripType = 'round' | 'oneway';
+export type DateMode = 'anytime' | 'specific';
 
 export type Destination = {
   city: string;
@@ -23,7 +24,9 @@ export type SearchInput = {
   adults: number;
   children: number;
   days: number;
-  startDate: string;
+  dateMode?: DateMode;
+  searchMonths?: 1 | 3 | 6 | 12;
+  startDate?: string;
   flexDays: number;
   includeHotel: boolean;
   includeFood: boolean;
