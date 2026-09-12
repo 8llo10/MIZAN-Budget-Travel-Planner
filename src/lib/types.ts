@@ -18,6 +18,7 @@ export type SearchInput = {
   origin: string;
   destination?: string;
   region?: 'ALL' | Region;
+  currency?: string;
   budget: number;
   adults: number;
   children: number;
