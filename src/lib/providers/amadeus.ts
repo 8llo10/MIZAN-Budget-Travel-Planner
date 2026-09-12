@@ -1,4 +1,5 @@
 export type LiveFare = { carrier: string; flight: number; stops: number };
+export type CheapestDate = { departure: string; returnDate: string | null; price: number };
 let tokenCache: { token: string; expires: number } | null = null;
 
 async function token() {
@@ -55,5 +56,37 @@ export async function getLiveFare(args: {origin:string; destination:string; depa
     return best || null;
   } catch {
     return null;
+  }
+}
+
+export async function getCheapestDates(args:{origin:string;destination:string;oneWay:boolean;days:number}):Promise<CheapestDate[]> {
+  const accessToken = await token();
+  if (!accessToken) return [];
+  const base = process.env.AMADEUS_BASE_URL || 'https://test.api.amadeus.com';
+  const query = new URLSearchParams({
+    origin: args.origin,
+    destination: args.destination,
+    oneWay: String(args.oneWay),
+  });
+  if (!args.oneWay) query.set('duration', String(Math.max(1,args.days-1)));
+  try {
+    const res = await fetch(`${base}/v1/shopping/flight-dates?${query}`, {
+      headers:{Authorization:`Bearer ${accessToken}`},
+      cache:'no-store',
+      signal:AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return [];
+    const json = await res.json() as any;
+    return (Array.isArray(json.data)?json.data:[])
+      .map((x:any)=>({
+        departure:String(x.departureDate||''),
+        returnDate:x.returnDate?String(x.returnDate):null,
+        price:Number(x.price?.total||0),
+      }))
+      .filter((x:CheapestDate)=>/^\d{4}-\d{2}-\d{2}$/.test(x.departure)&&Number.isFinite(x.price)&&x.price>0)
+      .sort((a:CheapestDate,b:CheapestDate)=>a.price-b.price)
+      .slice(0,20);
+  } catch {
+    return [];
   }
 }
