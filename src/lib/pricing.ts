@@ -20,23 +20,29 @@ function routeBase(origin:string, destination:Destination, departure:string) {
 function referenceFare(input:SearchInput,destination:Destination,departure:string) {
   const travelers = input.adults + input.children;
   const originAirport = uniqueDestinations.find(d=>placeKey(d)===input.origin)?.iata || input.origin;
+
+  if (originAirport === destination.iata) {
+    return {carrier:'No flight required',flight:0,stops:0,travelers};
+  }
+
   const adultFare = routeBase(originAirport,destination,departure);
   const childFare = Math.round(adultFare * .78);
   const tripFactor = input.tripType === 'round' ? 1.68 : 1;
   const flight = Math.round((adultFare * input.adults + childFare * input.children) * tripFactor);
   const seed = Math.abs(hash(`${destination.iata}:${departure}:carrier`));
   const carriers = destination.region === 'Saudi Arabia' ? ['SAUDIA','flynas','flyadeal'] : ['SAUDIA','flynas','Qatar Airways','Emirates','Gulf Air','Air Arabia','Royal Jordanian','EgyptAir'];
-  return {carrier:carriers[seed%carriers.length],flight,stops:destination.region==='Arab World' && seed%5===0?1:0, travelers};
+  return {carrier:carriers[seed%carriers.length],flight,stops:destination.region==='Arab World' && seed%5===0?1:0,travelers};
 }
 
 function costFor(input:SearchInput,destination:Destination,departure:string,fx:FxSnapshot,flightOverride?:{carrier:string;flight:number;stops:number}|null): TripResult {
   const travelers = input.adults + input.children;
   const rooms = Math.max(1, Math.ceil(travelers / 2));
-  const nights = input.tripType === 'round' ? Math.max(1,input.days-1) : Math.max(0,input.days-1);
+  const nights = Math.max(0,input.days - 1);
   const factor = styleMultiplier[input.spendStyle];
   const sarPerUnit = fx.sarPerUnit[destination.currency] || 1;
   const ref = referenceFare(input,destination,departure);
   const fare = flightOverride || ref;
+
   const hotel = input.includeHotel ? Math.round(destination.hotelNight * sarPerUnit * nights * rooms * factor) : 0;
   const food = input.includeFood ? Math.round(destination.dailyFood * sarPerUnit * input.days * (input.adults + input.children*.65) * factor) : 0;
   const local = input.includeLocal ? Math.round(destination.dailyLocal * sarPerUnit * input.days * Math.max(1,travelers*.72) * factor) : 0;
@@ -46,23 +52,63 @@ function costFor(input:SearchInput,destination:Destination,departure:string,fx:F
   const usage = input.budget > 0 ? total/input.budget : 99;
   const within = remaining >= 0;
   const score = Math.round((within ? 100 : 40) - Math.abs(1-usage)*30 - fare.stops*3 + (fare === flightOverride ? 4 : 0));
-  return {...destination,departure,returnDate:input.tripType==='round'?addDays(departure,input.days):null,carrier:fare.carrier,stops:fare.stops,liveFare:Boolean(flightOverride),costs:{flight:fare.flight,hotel,food,local,activities,total,perPerson:Math.round(total/Math.max(1,travelers))},remaining,within,budgetUsage:Math.round(usage*100),score,rooms,travelers,nativeCurrency:destination.currency,fxRateToSar:sarPerUnit};
+
+  return {
+    ...destination,
+    departure,
+    returnDate:input.tripType==='round' ? addDays(departure,Math.max(0,input.days-1)) : null,
+    carrier:fare.carrier,
+    stops:fare.stops,
+    liveFare:Boolean(flightOverride),
+    costs:{flight:fare.flight,hotel,food,local,activities,total,perPerson:Math.round(total/Math.max(1,travelers))},
+    remaining,
+    within,
+    budgetUsage:Math.round(usage*100),
+    score,
+    rooms,
+    travelers,
+    nativeCurrency:destination.currency,
+    fxRateToSar:sarPerUnit
+  };
 }
 
 export async function searchTrips(input:SearchInput,fx:FxSnapshot) {
   const originPlace = uniqueDestinations.find(d=>placeKey(d)===input.origin) || uniqueDestinations.find(d=>d.iata===input.origin);
   if (!originPlace) return {results:[],source:'reference' as const};
-  const candidates = uniqueDestinations.filter(d => placeKey(d)!==placeKey(originPlace) && (!input.destination || placeKey(d)===input.destination || d.iata===input.destination) && (!input.region || input.region==='ALL' || d.region===input.region));
+
+  const candidates = uniqueDestinations.filter(d =>
+    placeKey(d)!==placeKey(originPlace) &&
+    (!input.destination || placeKey(d)===input.destination || d.iata===input.destination) &&
+    (!input.region || input.region==='ALL' || d.region===input.region)
+  );
+
   const offsets = Array.from({length:Math.min(15,input.flexDays*2+1)},(_,i)=>i-input.flexDays);
   const baseResults = candidates.flatMap(destination=>offsets.map(offset=>costFor(input,destination,addDays(input.startDate,offset),fx)));
   let source:'live+reference'|'reference'='reference';
+
   if (input.destination && process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET) {
     const targets=baseResults.slice(0,Math.min(7,baseResults.length));
-    const live=await Promise.all(targets.map(async item=>{const fare=await getLiveFare({origin:originPlace.iata,destination:item.iata,departure:item.departure,returnDate:item.returnDate,adults:input.adults,children:input.children});return fare?costFor(input,item,item.departure,fx,fare):item;}));
-    baseResults.splice(0,live.length,...live); if(live.some(x=>x.liveFare))source='live+reference';
+    const live=await Promise.all(targets.map(async item=>{
+      if (originPlace.iata === item.iata) return item;
+      const fare=await getLiveFare({origin:originPlace.iata,destination:item.iata,departure:item.departure,returnDate:item.returnDate,adults:input.adults,children:input.children});
+      return fare?costFor(input,item,item.departure,fx,fare):item;
+    }));
+    baseResults.splice(0,live.length,...live);
+    if(live.some(x=>x.liveFare))source='live+reference';
   }
-  const sorted=baseResults.sort((a,b)=>{if(a.within!==b.within)return a.within?-1:1;if(a.within&&b.within)return b.score-a.score||b.remaining-a.remaining;return a.costs.total-b.costs.total;});
+
+  const sorted=baseResults.sort((a,b)=>{
+    if(a.within!==b.within)return a.within?-1:1;
+    if(a.within&&b.within)return b.score-a.score||b.remaining-a.remaining;
+    return a.costs.total-b.costs.total;
+  });
+
   const perDestination=new Map<string,TripResult[]>();
-  for(const item of sorted){const key=placeKey(item);const list=perDestination.get(key)||[];if(list.length<(input.destination?12:2))list.push(item);perDestination.set(key,list);}
+  for(const item of sorted){
+    const key=placeKey(item);
+    const list=perDestination.get(key)||[];
+    if(list.length<(input.destination?12:2))list.push(item);
+    perDestination.set(key,list);
+  }
   return {results:Array.from(perDestination.values()).flat().slice(0,30),source};
 }
