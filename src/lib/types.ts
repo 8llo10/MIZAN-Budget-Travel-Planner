@@ -79,6 +79,7 @@ export type TripResult = Destination & {
   budgetUsage: number;
   score: number;
   rooms: number;
+  days: number;
   nights: number;
   travelers: number;
   adultsCount: number;
