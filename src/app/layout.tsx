@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Manrope, Noto_Kufi_Arabic } from 'next/font/google';
+import ThemeToggle from '@/components/ThemeToggle';
 import './globals.css';
 
 const manrope = Manrope({subsets:['latin'],variable:'--font-latin',display:'swap'});
@@ -16,5 +17,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({children}:{children:React.ReactNode}) {
-  return <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${kufi.variable}`}><body>{children}</body></html>;
+  return <html lang="en" suppressHydrationWarning className={`${manrope.variable} ${kufi.variable}`}><body><ThemeToggle/>{children}</body></html>;
 }
