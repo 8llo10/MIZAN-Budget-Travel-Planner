@@ -1,2 +1,2 @@
-import TravelPlanner from '@/components/TravelPlanner';
-export default function Page(){return <TravelPlanner/>}
+import FinalPlanner from '@/components/FinalPlanner';
+export default function Page(){return <FinalPlanner/>}
